@@ -95,9 +95,8 @@ sub crop_square {
     my $img = Imager->new(file => $orig, type => $type)
         or die Imager->errstr;
     my $newimg = $self->_image_crop($img);
-    my $filename = File::Temp::tempnam($APP_TMP_DIR, 'crop-') . ".$ext";
     $newimg->write(
-        file => $filename,
+        file => $save,
         type => $type,
     ) or die $img->errstr;
     return $filename;
