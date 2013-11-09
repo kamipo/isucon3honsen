@@ -77,7 +77,7 @@ sub convert {
 
     my $buffer;
     my $img = Imager->new(file => $orig, type => $type);
-    unless ($img) {
+    unless (0 && $img) {
         $buffer = $self->convert_by_imagemagick(@_);
     } else {
 
