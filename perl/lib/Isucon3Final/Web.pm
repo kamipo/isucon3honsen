@@ -39,7 +39,10 @@ sub convert {
     my $type = $ext eq 'jpg' ? 'jpeg' : $ext;
 
     my $img = Imager->new(file => $orig, type => $type)
-        or die Imager->errstr;
+        or do {
+            warn "Imager->new(file => $orig, type => $type)";
+            die Imager->errstr;
+        };
 
     my $newimg = $img->scale(
         qtype => 'mixing',
