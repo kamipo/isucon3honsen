@@ -235,9 +235,9 @@ post '/signup' => sub {
     );
     $c->render_json({
         id      => number $user->{id},
-        name    => string $user->{name},
-        icon    => string $c->req->uri_for("/icon/" . $user->{icon}),
-        api_key => string $user->{api_key},
+        name    => $user->{name},
+        icon    => $c->req->uri_for("/icon/" . $user->{icon}),
+        api_key => $user->{api_key},
     });
 };
 
@@ -246,8 +246,8 @@ get '/me' => [qw/ get_user require_user/] => sub {
     my $user = $c->stash->{user};
     $c->render_json({
         id   => number $user->{id},
-        name => string $user->{name},
-        icon => string $c->req->uri_for("/icon/" . $user->{icon}),
+        name => $user->{name},
+        icon => $c->req->uri_for("/icon/" . $user->{icon}),
     });
 };
 
@@ -292,7 +292,7 @@ post '/icon' => [qw/ get_user require_user /] => sub {
         $icon, $user->{id},
     );
     $c->render_json({
-        icon => string $c->req->uri_for("/icon/" . $icon),
+        icon => $c->req->uri_for("/icon/" . $icon),
     });
 };
 
@@ -324,12 +324,12 @@ post '/entry' => [qw/ get_user require_user /] => sub {
     );
     $c->render_json({
         id            => number $entry->{id},
-        image         => string $c->req->uri_for("/image/" . $entry->{image}),
+        image         => $c->req->uri_for("/image/" . $entry->{image}),
         publish_level => number $entry->{publish_level},
         user => {
             id   => number $user->{id},
-            name => string $user->{name},
-            icon => string $c->req->uri_for("/icon/" . $user->{icon}),
+            name => $user->{name},
+            icon => $c->req->uri_for("/icon/" . $user->{icon}),
         },
     });
 };
@@ -487,8 +487,8 @@ sub get_following {
                 my $u = $_;
                 +{
                     id   => number $u->{id},
-                    name => string $u->{name},
-                    icon => string $c->req->uri_for("/icon/" . $u->{icon}),
+                    name => $u->{name},
+                    icon => $c->req->uri_for("/icon/" . $u->{icon}),
                 };
             } @$following
         ],
@@ -555,12 +555,12 @@ get '/timeline' => [qw/ get_user require_user /] => sub {
         my $entry = $_;
         +{
             id         => number $entry->{id},
-            image      => string $c->req->uri_for("/image/" . $entry->{image}),
+            image      => $c->req->uri_for("/image/" . $entry->{image}),
             publish_level => number $entry->{publish_level},
             user => {
                 id   => number $entry->{user},
-                name => string $entry->{user_name},
-                icon => string $c->req->uri_for("/icon/" . $entry->{user_icon}),
+                name => $entry->{user_name},
+                icon => $c->req->uri_for("/icon/" . $entry->{user_icon}),
             },
         }
     } @entries;

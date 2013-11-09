@@ -6,6 +6,7 @@ requires "JSON::Types";
 requires "Starlet";
 requires "Data::UUID";
 requires 'Imager';
+requires 'Imager::File::JPEG';
 requires "Furl";
 
 on 'test' => sub {
