@@ -21,4 +21,26 @@ subtest "/" => sub {
             ok $res->content, "content";
         };
 };
+
+subtest "/timeline" => sub {
+    test_psgi
+        app    => $app,
+        client => sub {
+            my $cb  = shift;
+            my $res = $cb->( GET "http://localhost/timeline" );
+            is $res->code, 200;
+            ok $res->content, "content";
+        };
+};
+
+subtest "/timeline?latest_entries=1" => sub {
+    test_psgi
+        app    => $app,
+        client => sub {
+            my $cb  = shift;
+            my $res = $cb->( GET "http://localhost/timeline?latest_entries=1" );
+            is $res->code, 200;
+            ok $res->content, "content";
+        };
+};
 done_testing;

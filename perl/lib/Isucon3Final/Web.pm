@@ -448,11 +448,11 @@ get '/timeline' => [qw/ get_user require_user /] => sub {
     my $latest_entry = $c->req->param("latest_entry");
     my ($sql, @params);
     if ($latest_entry) {
-        $sql = 'SELECT * FROM (SELECT * FROM entries WHERE (user=? OR publish_level=2 OR (publish_level=1 AND user IN (SELECT target FROM follow_map WHERE user=?))) AND id > ? ORDER BY id LIMIT 30) AS e ORDER BY e.id DESC';
+        $sql = 'SELECT * FROM (SELECT entries.*, u.name as user_name, u.icon as user_icon FROM entries INNER JOIN users as u ON entries.user = u.id WHERE (user=? OR publish_level=2 OR (publish_level=1 AND user IN (SELECT target FROM follow_map WHERE user=?))) AND entries.id > ? ORDER BY entries.id LIMIT 30) AS e ORDER BY e.id DESC';
         @params = ($user->{id}, $user->{id}, $latest_entry);
     }
     else {
-        $sql = 'SELECT * FROM entries WHERE (user=? OR publish_level=2 OR (publish_level=1 AND user IN (SELECT target FROM follow_map WHERE user=?))) ORDER BY id DESC LIMIT 30';
+        $sql = 'SELECT entries.*, u.name as user_name, u.icon as user_icon FROM entries INNER JOIN users as u ON entries.user = u.id WHERE (user=? OR publish_level=2 OR (publish_level=1 AND user IN (SELECT target FROM follow_map WHERE user=?))) ORDER BY entries.id DESC LIMIT 30';
         @params = ($user->{id}, $user->{id});
     }
     my $start = time;
@@ -470,26 +470,22 @@ get '/timeline' => [qw/ get_user require_user /] => sub {
         }
     }
     $c->res->header("Cache-Control" => "no-cache");
+    @entries = map {
+        my $entry = $_;
+        +{
+            id         => number $entry->{id},
+            image      => string $c->req->uri_for("/image/" . $entry->{image}),
+            publish_level => number $entry->{publish_level},
+            user => {
+                id   => number $entry->{user},
+                name => string $entry->{user_name},
+                icon => string $c->req->uri_for("/icon/" . $entry->{user_icon}),
+            },
+        }
+    } @entries;
     $c->render_json({
         latest_entry => number $latest_entry,
-        entries => [
-            map {
-                my $entry = $_;
-                my $user  = $self->dbh->select_row(
-                    "SELECT * FROM users WHERE id=?", $entry->{user},
-                );
-                +{
-                    id         => number $entry->{id},
-                    image      => string $c->req->uri_for("/image/" . $entry->{image}),
-                    publish_level => number $entry->{publish_level},
-                    user => {
-                        id   => number $user->{id},
-                        name => string $user->{name},
-                        icon => string $c->req->uri_for("/icon/" . $user->{icon}),
-                    },
-                }
-            } @entries
-        ]
+        entries => \@entries,
     });
 };
 
