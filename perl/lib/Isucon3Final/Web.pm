@@ -6,6 +6,7 @@ use utf8;
 
 use File::Spec;
 use File::Basename qw(dirname);
+use Furl;
 use Kossy;
 use Digest::SHA qw/ sha256_hex /;
 use DBIx::Sunny;
@@ -32,6 +33,9 @@ use constant {
     IMAGE_M  => 256,
     IMAGE_L  => undef,
 };
+
+my $FURL = Furl->new( ua => 'Isucon3Final::Web/Furl' );
+sub furl { $FURL }
 
 sub convert_with_crop {
     my $self = shift;
@@ -363,6 +367,54 @@ sub can_access_image {
     }
 }
 
+sub get_image_data {
+    my($self, $c, %args) = shift;
+
+    my $want_file = $args{want_file};
+    my $base_file = $args{base_file};
+
+    if (-f $want_file) {
+        # 欲しいファイルが手元にあるならそのまま返す
+        open my $in, '<', $want_file or $c->halt(500);
+        local $/;
+        return <$in>;
+    }
+
+    if ($base_file && -f $base_file) {
+        # オリジナルファイルがあれば、それを元にコンバートする
+        return $self->convert_with_crop($base_file, 'jpg', $args{crop_save}, $args{w}, $args{h}, $want_file);
+    }
+
+    # 欲しいファイルの取得を試みる
+    my $want_url = $want_file;
+    $want_url =~ s{/home/isucon/webapp}{http://10.11.9.101};
+    my $want_res = furl()->get($want_url);
+    if ($want_res->is_success) {
+        # 欲しいファイルあったので保存して返す
+        open my $fh, '>', $want_file;
+        print $fh $want_res->content;
+        close $fh;
+        return $want_res->content;
+    }
+
+    # オリジナルファイルの取得を試みる
+    if ($base_file && -f $base_file) {
+        my $base_url = $base_file;
+        $base_url =~ s{/home/isucon/webapp}{http://10.11.9.101};
+        my $base_res = furl()->get($base_url);
+        if ($base_res->is_success) {
+            # 欲しいファイルあったので保存して変換して返す
+            open my $fh, '>', $base_file;
+            print $fh $base_res->content;
+            close $fh;
+
+            return $self->convert_with_crop($base_file, 'jpg', $args{crop_save}, $args{w}, $args{h}, $want_file);
+        }
+    }
+
+    die "cant find files want_file:$want_file base_file:$base_file";
+}
+
 get '/image/:image' => [qw/ get_user /] => sub {
     my ( $self, $c ) = @_;
     my $user  = $c->stash->{user};
@@ -381,11 +433,17 @@ get '/image/:image' => [qw/ get_user /] => sub {
     my $data;
     if ($w) {
         my $_size = $size || 'l';
-        $data = $self->convert_with_crop("$dir/image/${image}.jpg", "jpg", "$local_dir/image/${_size}/${image}.jpg", $w, $h, "$local_dir/image/${_size}/${image}-${w}x${h}.jpg");
+        $data = $self->get_image_data(
+            want_file => "$local_dir/image/${_size}/${image}-${w}x${h}.jpg",
+            base_file => "$dir/image/${image}.jpg",
+            w         => $w,
+            h         => $h,
+        );
     }
     else {
-        open my $in, "<", "$dir/image/${image}.jpg" or $c->halt(500);
-        $data = do { local $/; <$in> };
+        $data = $self->get_image_data(
+            want_file => "$dir/image/${image}.jpg",
+        );
     }
     $c->res->content_type("image/jpeg");
     $c->res->content( $data );

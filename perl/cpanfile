@@ -6,6 +6,7 @@ requires "JSON::Types";
 requires "Starlet";
 requires "Data::UUID";
 requires 'Imager';
+requires "Furl";
 
 on 'test' => sub {
     requires 'Test::More';
@@ -19,7 +20,6 @@ on 'test' => sub {
 };
 
 on 'develop' => sub {
-    requires "Furl";
     requires "Clone";
     requires "HTTP::Request";
     requires "Log::Minimal";
