@@ -42,7 +42,9 @@ sub convert {
 
 sub crop_square {
     my $self = shift;
-    my ($orig, $ext) = @_;
+    my ($orig, $ext, $save) = @_;
+    return $save if -f $save; # has cache
+
     my $identity = `identify $orig`;
     my (undef, undef, $size) = split / +/, $identity;
     my ($w, $h) = split /x/, $size;
@@ -62,10 +64,8 @@ sub crop_square {
         $crop_x = 0;
         $crop_y = 0;
     }
-    my ($fh, $filename) = tempfile();
-    system("convert", "-crop", "${pixels}x${pixels}+${crop_x}+${crop_y}", $orig, "$filename.$ext");
-    unlink $filename;
-    return "$filename.$ext";
+    system("convert", "-crop", "${pixels}x${pixels}+${crop_x}+${crop_y}", $orig, $save);
+    return $save;
 }
 
 sub load_config {
@@ -199,11 +199,14 @@ post '/icon' => [qw/ get_user require_user /] => sub {
     if ( $upload->content_type !~ /^image\/(jpe?g|png)$/ ) {
         $c->halt(400);
     }
-    my $file = $self->crop_square($upload->path, "png");
+
+    my ($fh, $filename) = tempfile();
+    $self->crop_square($upload->path, "png", $filename);
     my $icon = sha256_hex( $UUID->create );
     my $dir  = $self->load_config->{data_dir};
-    File::Copy::move($file, "$dir/icon/$icon.png")
+    File::Copy::move($filename, "$dir/icon/$icon.png")
         or $c->halt(500);
+    unlink $filename;
 
     $self->dbh->query(
         'UPDATE users SET icon=? WHERE id=?',
@@ -308,6 +311,7 @@ get '/image/:image' => [qw/ get_user /] => sub {
     my $image = $c->args->{image};
     my $size  = $c->req->param("size") || "l";
     my $dir   = $self->load_config->{data_dir};
+    my $local_dir = $self->load_config->{local_data_dir};
 
     $self->can_access_image($c, $image, $user);
 
@@ -318,9 +322,9 @@ get '/image/:image' => [qw/ get_user /] => sub {
     my $h = $w;
     my $data;
     if ($w) {
-        my $file = $self->crop_square("$dir/image/${image}.jpg", "jpg");
+        my $file = "$local_dir/image/${size}${image}.jpg";
+        $self->crop_square("$dir/image/${image}.jpg", "jpg", $file);
         $data = $self->convert($file, "jpg", $w, $h);
-        unlink $file;
     }
     else {
         open my $in, "<", "$dir/image/${image}.jpg" or $c->halt(500);
