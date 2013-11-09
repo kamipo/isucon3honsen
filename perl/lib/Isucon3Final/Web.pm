@@ -33,13 +33,35 @@ use constant {
     IMAGE_L  => undef,
 };
 
+sub convert_with_crop {
+    my $self = shift;
+    my($orig, $ext, $crop_save, $w, $h, $save) = @_;
+    if (-f $save) {
+        open my $fh, '<', $save;
+        local $/;
+        return <$fh>;
+    }
+
+    $self->crop_square($orig, $ext, $crop_save);
+    $self->convert($crop_save, $ext, $w, $h, $save);
+}
+
 sub convert {
     my $self = shift;
-    my ($orig, $ext, $w, $h) = @_;
+    my ($orig, $ext, $w, $h, $save) = @_;
+    if (-f $save) {
+        open my $fh, '<', $save;
+        local $/;
+        return <$fh>;
+    }
+
     my $type = $ext eq 'jpg' ? 'jpeg' : $ext;
 
     my $img = Imager->new(file => $orig, type => $type)
-        or die Imager->errstr;
+        or do {
+            warn "Imager->new(file => $orig, type => $type)";
+            die Imager->errstr;
+        };
 
     my $newimg = $img->scale(
         qtype => 'mixing',
@@ -54,6 +76,11 @@ sub convert {
         type => $type,
         jpegquality => 90,
     ) or die $img->errstr;
+
+    open my $fh, '>', $save;
+    print $fh $buffer;
+    close $fh;
+
     return $buffer;
 }
 
@@ -89,17 +116,17 @@ sub _image_crop {
 
 sub crop_square {
     my $self = shift;
-    my ($orig, $ext) = @_;
+    my ($orig, $ext, $save) = @_;
+    return $save if -f $save; # has cache
     my $type = $ext eq 'jpg' ? 'jpeg' : $ext;
     my $img = Imager->new(file => $orig, type => $type)
         or die Imager->errstr;
     my $newimg = $self->_image_crop($img);
-    my $filename = File::Temp::tempnam($APP_TMP_DIR, 'crop-') . ".$ext";
     $newimg->write(
-        file => $filename,
+        file => $save,
         type => $type,
     ) or die $img->errstr;
-    return $filename;
+    return $save;
 }
 
 sub load_config {
@@ -217,7 +244,7 @@ get '/icon/:icon' => sub {
           :                ICON_S;
     my $h = $w;
 
-    my $data = $self->convert("$dir/icon/${icon}.png", "png", $w, $h);
+    my $data = $self->convert("$dir/icon/${icon}.png", "png", $w, $h, "$dir/icon/${icon}-${w}x${h}.png");
     $c->res->content_type("image/png");
     $c->res->content( $data );
     $c->res;
@@ -233,11 +260,11 @@ post '/icon' => [qw/ get_user require_user /] => sub {
     if ( $upload->content_type !~ /^image\/(jpe?g|png)$/ ) {
         $c->halt(400);
     }
-    my $file = $self->crop_square($upload->path, "png");
+
+    my ($fh, $filename) = tempfile();
     my $icon = sha256_hex( $UUID->create );
     my $dir  = $self->load_config->{data_dir};
-    File::Copy::move($file, "$dir/icon/$icon.png")
-        or $c->halt(500);
+    $self->crop_square($upload->path, "png", "$dir/icon/$icon.png");
 
     $self->dbh->query(
         'UPDATE users SET icon=? WHERE id=?',
@@ -324,7 +351,7 @@ sub can_access_image {
     }
     elsif ( $entry->{publish_level} == 1 ) {
         # publish_level==1 はentryの所有者かfollowerしか見えない
-        if ( $entry->{user} == $user->{id} ) {
+        if ( ($entry->{user} || '') eq ($user->{id} || '') ) {
             # ok
         } else {
             my $follow = $self->dbh->select_row(
@@ -342,6 +369,7 @@ get '/image/:image' => [qw/ get_user /] => sub {
     my $image = $c->args->{image};
     my $size  = $c->req->param("size") || "l";
     my $dir   = $self->load_config->{data_dir};
+    my $local_dir = $self->load_config->{local_data_dir};
 
     $self->can_access_image($c, $image, $user);
 
@@ -352,9 +380,8 @@ get '/image/:image' => [qw/ get_user /] => sub {
     my $h = $w;
     my $data;
     if ($w) {
-        my $file = $self->crop_square("$dir/image/${image}.jpg", "jpg");
-        $data = $self->convert($file, "jpg", $w, $h);
-        unlink $file;
+        my $_size = $size || 'l';
+        $data = $self->convert_with_crop("$dir/image/${image}.jpg", "jpg", "$local_dir/image/${_size}/${image}.jpg", $w, $h, "$local_dir/image/${_size}/${image}-${w}x${h}.jpg");
     }
     else {
         open my $in, "<", "$dir/image/${image}.jpg" or $c->halt(500);

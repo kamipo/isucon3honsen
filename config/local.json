@@ -6,6 +6,6 @@
     "username": "isucon",
     "password": ""
   },
-  "data_dir": "./data",
-  "local_data_dir": "./local_data"
+  "data_dir": "/home/isucon/webapp/data",
+  "local_data_dir": "/home/isucon/webapp/local_data"
 }
