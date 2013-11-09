@@ -99,7 +99,7 @@ sub crop_square {
         file => $save,
         type => $type,
     ) or die $img->errstr;
-    return $filename;
+    return $save;
 }
 
 sub load_config {
