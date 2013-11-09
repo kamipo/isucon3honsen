@@ -442,6 +442,7 @@ get '/image/:image' => [qw/ get_user /] => sub {
             $c,
             want_file => "$local_dir/image/${_size}/${image}-${w}x${h}.jpg",
             base_file => "$dir/image/${image}.jpg",
+            crop_save => "$local_dir/image/${_size}/${image}.jpg",
             w         => $w,
             h         => $h,
         );
