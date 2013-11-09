@@ -448,11 +448,11 @@ get '/timeline' => [qw/ get_user require_user /] => sub {
     my $latest_entry = $c->req->param("latest_entry");
     my ($sql, @params);
     if ($latest_entry) {
-        $sql = 'SELECT * FROM (SELECT *, u.name as user_name, u.icon as user_icon FROM entries INNER JOIN users as u ON entries.user = u.id WHERE (user=? OR publish_level=2 OR (publish_level=1 AND user IN (SELECT target FROM follow_map WHERE user=?))) AND entries.id > ? ORDER BY entries.id LIMIT 30) AS e ORDER BY e.id DESC';
+        $sql = 'SELECT * FROM (SELECT entries.*, u.name as user_name, u.icon as user_icon FROM entries INNER JOIN users as u ON entries.user = u.id WHERE (user=? OR publish_level=2 OR (publish_level=1 AND user IN (SELECT target FROM follow_map WHERE user=?))) AND entries.id > ? ORDER BY entries.id LIMIT 30) AS e ORDER BY e.id DESC';
         @params = ($user->{id}, $user->{id}, $latest_entry);
     }
     else {
-        $sql = 'SELECT *, u.name as user_name, u.icon as user_name FROM entries INNER JOIN users as u ON entries.user = u.id WHERE (user=? OR publish_level=2 OR (publish_level=1 AND user IN (SELECT target FROM follow_map WHERE user=?))) ORDER BY entries.id DESC LIMIT 30';
+        $sql = 'SELECT entries.*, u.name as user_name, u.icon as user_name FROM entries INNER JOIN users as u ON entries.user = u.id WHERE (user=? OR publish_level=2 OR (publish_level=1 AND user IN (SELECT target FROM follow_map WHERE user=?))) ORDER BY entries.id DESC LIMIT 30';
         @params = ($user->{id}, $user->{id});
     }
     my $start = time;
