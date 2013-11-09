@@ -439,6 +439,7 @@ get '/image/:image' => [qw/ get_user /] => sub {
     if ($w) {
         my $_size = $size || 'l';
         $data = $self->get_image_data(
+            $c,
             want_file => "$local_dir/image/${_size}/${image}-${w}x${h}.jpg",
             base_file => "$dir/image/${image}.jpg",
             w         => $w,
@@ -447,6 +448,7 @@ get '/image/:image' => [qw/ get_user /] => sub {
     }
     else {
         $data = $self->get_image_data(
+            $c,
             want_file => "$dir/image/${image}.jpg",
         );
     }
