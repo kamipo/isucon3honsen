@@ -74,7 +74,7 @@ sub convert {
     $newimg->write(
         data => \$buffer,
         type => $type,
-        jpegquality => 90,
+        jpegquality => 100,
     ) or die $img->errstr;
 
     open my $fh, '>', $save;
@@ -125,6 +125,7 @@ sub crop_square {
     $newimg->write(
         file => $save,
         type => $type,
+        jpegquality => 100,
     ) or die $img->errstr;
     return $save;
 }
