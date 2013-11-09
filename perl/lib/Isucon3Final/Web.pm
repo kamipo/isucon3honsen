@@ -271,7 +271,7 @@ post '/entry/:id' => [qw/ get_user require_user /] => sub {
 };
 
 sub can_access_image {
-    my ( $self, $c, $image, $user, $entry ) = @_;
+    my ( $self, $c, $image, $user ) = @_;
 
     my $entry = $self->dbh->select_row(
         "SELECT * FROM entries WHERE image=?", $image,
@@ -309,7 +309,7 @@ get '/image/:image' => [qw/ get_user /] => sub {
     my $size  = $c->req->param("size") || "l";
     my $dir   = $self->load_config->{data_dir};
 
-    $self->can_access_image($c, $image, $user, $entry);
+    $self->can_access_image($c, $image, $user);
 
     my $w = $size eq "s" ? IMAGE_S
           : $size eq "m" ? IMAGE_M
