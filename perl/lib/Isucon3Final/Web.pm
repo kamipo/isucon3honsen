@@ -3,6 +3,9 @@ package Isucon3Final::Web;
 use strict;
 use warnings;
 use utf8;
+
+use File::Spec;
+use File::Basename qw(dirname);
 use Kossy;
 use Digest::SHA qw/ sha256_hex /;
 use DBIx::Sunny;
@@ -12,6 +15,10 @@ use File::Temp qw/ tempfile /;
 use POSIX qw/ floor /;
 use File::Copy;
 use Data::UUID;
+
+use Imager;
+
+my $APP_TMP_DIR = File::Spec->catfile(File::Spec->rel2abs(dirname __FILE__), "../../tmp");
 
 our $TIMEOUT  = 30;
 our $INTERVAL = 2;
@@ -29,25 +36,32 @@ use constant {
 sub convert {
     my $self = shift;
     my ($orig, $ext, $w, $h) = @_;
-    my ($fh, $filename) = tempfile();
-    my $newfile = "$filename.$ext";
-    system("convert", "-geometry", "${w}x${h}", $orig, $newfile);
-    open my $newfh, "<", $newfile or die $!;
-    read $newfh, my $data, -s $newfile;
-    close $newfh;
-    unlink $newfile;
-    unlink $filename;
-    $data;
+    my $type = $ext eq 'jpg' ? 'jpeg' : $ext;
+
+    my $img = Imager->new(file => $orig, type => $type)
+        or die Imager->errstr;
+
+    my $newimg = $img->scale(
+        qtype => 'mixing',
+        type => 'min',
+        xpixels => $w,
+        ypixels => $h,
+    ) or die $img->errstr;
+
+    my $buffer;
+    $newimg->write(
+        data => \$buffer,
+        type => $type,
+        jpegquality => 90,
+    ) or die $img->errstr;
+    return $buffer;
 }
 
-sub crop_square {
+sub _image_crop {
     my $self = shift;
-    my ($orig, $ext, $save) = @_;
-    return $save if -f $save; # has cache
-
-    my $identity = `identify $orig`;
-    my (undef, undef, $size) = split / +/, $identity;
-    my ($w, $h) = split /x/, $size;
+    my ($img) = @_;
+    my $w = $img->getwidth();
+    my $h = $img->getheight();
     my ($crop_x, $crop_y, $pixels);
     if ( $w > $h ) {
         $pixels = $h;
@@ -64,8 +78,29 @@ sub crop_square {
         $crop_x = 0;
         $crop_y = 0;
     }
-    system("convert", "-crop", "${pixels}x${pixels}+${crop_x}+${crop_y}", $orig, $save);
-    return $save;
+
+    return $img->crop(
+        width  => $pixels,
+        height => $pixels,
+        left   => $crop_x,
+        top    => $crop_y,
+    ) or die $img->errstr;
+}
+
+sub crop_square {
+    my $self = shift;
+    my ($orig, $ext, $save) = @_;
+    return $save if -f $save; # has cache
+    my $type = $ext eq 'jpg' ? 'jpeg' : $ext;
+    my $img = Imager->new(file => $orig, type => $type)
+        or die Imager->errstr;
+    my $newimg = $self->_image_crop($img);
+    my $filename = File::Temp::tempnam($APP_TMP_DIR, 'crop-') . ".$ext";
+    $newimg->write(
+        file => $filename,
+        type => $type,
+    ) or die $img->errstr;
+    return $filename;
 }
 
 sub load_config {
