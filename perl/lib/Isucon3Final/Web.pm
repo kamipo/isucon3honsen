@@ -33,9 +33,28 @@ use constant {
     IMAGE_L  => undef,
 };
 
+sub convert_with_crop {
+    my $self = shift;
+    my($orig, $ext, $crop_save, $w, $h, $save) = @_;
+    if (-f $save) {
+        open my $fh, '<', $save;
+        local $/;
+        return <$fh>;
+    }
+
+    $self->crop_square($orig, $ext, $crop_save);
+    $self->convert($crop_save, $ext, $w, $h, $save);
+}
+
 sub convert {
     my $self = shift;
-    my ($orig, $ext, $w, $h) = @_;
+    my ($orig, $ext, $w, $h, $save) = @_;
+    if (-f $save) {
+        open my $fh, '<', $save;
+        local $/;
+        return <$fh>;
+    }
+
     my $type = $ext eq 'jpg' ? 'jpeg' : $ext;
 
     my $img = Imager->new(file => $orig, type => $type)
@@ -57,6 +76,11 @@ sub convert {
         type => $type,
         jpegquality => 90,
     ) or die $img->errstr;
+
+    open my $fh, '>', $save;
+    print $fh $buffer;
+    close $fh;
+
     return $buffer;
 }
 
@@ -220,7 +244,7 @@ get '/icon/:icon' => sub {
           :                ICON_S;
     my $h = $w;
 
-    my $data = $self->convert("$dir/icon/${icon}.png", "png", $w, $h);
+    my $data = $self->convert("$dir/icon/${icon}.png", "png", $w, $h, "$dir/icon/${icon}-${w}x${h}.png");
     $c->res->content_type("image/png");
     $c->res->content( $data );
     $c->res;
@@ -357,9 +381,7 @@ get '/image/:image' => [qw/ get_user /] => sub {
     my $data;
     if ($w) {
         my $_size = $size || 'l';
-        my $file = "$local_dir/image/${_size}/${image}.jpg";
-        $self->crop_square("$dir/image/${image}.jpg", "jpg", $file);
-        $data = $self->convert($file, "jpg", $w, $h);
+        $data = $self->convert_with_crop("$dir/image/${image}.jpg", "jpg", "$local_dir/image/${_size}/${image}.jpg", $w, $h, "$local_dir/image/${_size}/${image}-${w}x${h}.jpg");
     }
     else {
         open my $in, "<", "$dir/image/${image}.jpg" or $c->halt(500);
