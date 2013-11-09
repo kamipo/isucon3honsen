@@ -36,23 +36,29 @@ use constant {
 sub convert {
     my $self = shift;
     my ($orig, $ext, $w, $h) = @_;
-    my ($fh, $filename) = tempfile();
-    my $newfile = "$filename.$ext";
-    system("convert", "-geometry", "${w}x${h}", $orig, $newfile);
-    open my $newfh, "<", $newfile or die $!;
-    read $newfh, my $data, -s $newfile;
-    close $newfh;
-    unlink $newfile;
-    unlink $filename;
-    $data;
-}
-
-sub crop_square {
-    my $self = shift;
-    my ($orig, $ext) = @_;
     my $type = $ext eq 'jpg' ? 'jpeg' : $ext;
+
     my $img = Imager->new(file => $orig, type => $type)
         or die Imager->errstr;
+
+    my $newimg = $img->scale(
+        qtype => 'mixing',
+        type => 'min',
+        xpixels => $w,
+        ypixels => $h,
+    ) or die $img->errstr;
+
+    my $buffer;
+    $newimg->write(
+        data => \$buffer,
+        type => $type,
+    ) or die $img->errstr;
+    return $buffer;
+}
+
+sub _image_crop {
+    my $self = shift;
+    my ($img) = @_;
     my $w = $img->getwidth();
     my $h = $img->getheight();
     my ($crop_x, $crop_y, $pixels);
@@ -72,17 +78,26 @@ sub crop_square {
         $crop_y = 0;
     }
 
-    my $filename = File::Temp::tempnam($APP_TMP_DIR, 'crop-') . ".$ext";
-
-    my $newimg = $img->crop(
-        width  => $w,
-        height => $h,
+    return $img->crop(
+        width  => $pixels,
+        height => $pixels,
         left   => $crop_x,
         top    => $crop_y,
-    ) or die Imager->errstr;
-    $newimg->write(file => $filename, type => $type)
-        or die Imager->errstr;
+    ) or die $img->errstr;
+}
 
+sub crop_square {
+    my $self = shift;
+    my ($orig, $ext) = @_;
+    my $type = $ext eq 'jpg' ? 'jpeg' : $ext;
+    my $img = Imager->new(file => $orig, type => $type)
+        or die Imager->errstr;
+    my $newimg = $self->_image_crop($img);
+    my $filename = File::Temp::tempnam($APP_TMP_DIR, 'crop-') . ".$ext";
+    $newimg->write(
+        file => $filename,
+        type => $type,
+    ) or die $img->errstr;
     return $filename;
 }
 

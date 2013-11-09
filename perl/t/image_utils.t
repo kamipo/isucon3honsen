@@ -9,7 +9,10 @@ use Isucon3Final::Web;
 use Test::More;
 
 my $data = "$Bin/data";
+my $tmp  = "$Bin/tmp";
 my $image_diff = "$Bin/image_diff";
+
+mkdir $tmp;
 
 package U { # default implementation
     use File::Temp qw/ tempfile /;
@@ -62,24 +65,42 @@ package U { # default implementation
 sub save_to_tempfile {
     my($binary) = @_;
 
-    my $filename = File::Temp::tempnam($data, 'XXX');
+    my $filename = File::Temp::tempnam($tmp, 'XXX') . ".jpg";
     open my $fh, ">:raw", $filename;
     print $fh $binary;
     close $fh;
     return $filename;
 }
 
-subtest 'convert', sub {
-    my $g = Isucon3Final::Web->convert("$data/fujiwara.jpg", "jpg", 73, 90);
-    my $x = U->convert("$data/fujiwara.jpg", "jpg", 73, 90);
+subtest 'convert to size=32', sub {
+    my $s = 32;
+    my $g = Isucon3Final::Web->convert("$data/fujiwara.jpg", "jpg", $s, $s);
+    my $x = U->convert("$data/fujiwara.jpg", "jpg", $s, $s);
 
     my $got = save_to_tempfile($g);
     my $expected = save_to_tempfile($x);
 
     my $result = `$image_diff $got $expected`;
     is $?, 0, 'exit status';
-    my($gp, $xp) = ($result =~ /(\d+)/g);
-    cmp_ok $gp / $xp, '<', 0.01, $result;
+    my($ng, $all) = ($result =~ /(\d+)/g);
+    cmp_ok $ng / $all, '<', 0.02, $result;
+
+    unlink $got;
+    unlink $expected;
+};
+
+subtest 'convert to size=64', sub {
+    my $s = 64;
+    my $g = Isucon3Final::Web->convert("$data/fujiwara.jpg", "jpg", $s, $s);
+    my $x = U->convert("$data/fujiwara.jpg", "jpg", $s, $s);
+
+    my $got = save_to_tempfile($g);
+    my $expected = save_to_tempfile($x);
+
+    my $result = `$image_diff $got $expected`;
+    is $?, 0, 'exit status';
+    my($ng, $all) = ($result =~ /(\d+)/g);
+    cmp_ok $ng / $all, '<', 0.02, $result;
 
     unlink $got;
     unlink $expected;
@@ -91,8 +112,8 @@ subtest 'image_crop', sub {
 
     my $result = `$image_diff $got $expected`;
     is $?, 0, 'exit status';
-    my($gp, $xp) = ($result =~ /(\d+)/g);
-    cmp_ok $gp / $xp, '<', 0.01, $result;
+    my($ng, $all) = ($result =~ /(\d+)/g);
+    cmp_ok $ng / $all, '<', 0.02, $result;
 
     unlink $got;
     unlink $expected;
