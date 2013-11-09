@@ -11,7 +11,7 @@ use Test::More;
 my $data = "$Bin/data";
 my $image_diff = "$Bin/image_diff";
 
-package U {
+package U { # default implementation
     use File::Temp qw/ tempfile /;
     use POSIX qw/ floor /;
     use File::Copy;

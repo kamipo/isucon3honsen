@@ -3,6 +3,9 @@ package Isucon3Final::Web;
 use strict;
 use warnings;
 use utf8;
+
+use File::Spec;
+use File::Basename qw(dirname);
 use Kossy;
 use Digest::SHA qw/ sha256_hex /;
 use DBIx::Sunny;
@@ -12,6 +15,10 @@ use File::Temp qw/ tempfile /;
 use POSIX qw/ floor /;
 use File::Copy;
 use Data::UUID;
+
+use Imager;
+
+my $APP_TMP_DIR = File::Spec->catfile(File::Spec->rel2abs(dirname __FILE__), "../../tmp");
 
 our $TIMEOUT  = 30;
 our $INTERVAL = 2;
@@ -43,9 +50,11 @@ sub convert {
 sub crop_square {
     my $self = shift;
     my ($orig, $ext) = @_;
-    my $identity = `identify $orig`;
-    my (undef, undef, $size) = split / +/, $identity;
-    my ($w, $h) = split /x/, $size;
+    my $type = $ext eq 'jpg' ? 'jpeg' : $ext;
+    my $img = Imager->new(file => $orig, type => $type)
+        or die Imager->errstr;
+    my $w = $img->getwidth();
+    my $h = $img->getheight();
     my ($crop_x, $crop_y, $pixels);
     if ( $w > $h ) {
         $pixels = $h;
@@ -62,10 +71,19 @@ sub crop_square {
         $crop_x = 0;
         $crop_y = 0;
     }
-    my ($fh, $filename) = tempfile();
-    system("convert", "-crop", "${pixels}x${pixels}+${crop_x}+${crop_y}", $orig, "$filename.$ext");
-    unlink $filename;
-    return "$filename.$ext";
+
+    my $filename = File::Temp::tempnam($APP_TMP_DIR, 'crop-') . ".$ext";
+
+    my $newimg = $img->crop(
+        width  => $w,
+        height => $h,
+        left   => $crop_x,
+        top    => $crop_y,
+    ) or die Imager->errstr;
+    $newimg->write(file => $filename, type => $type)
+        or die Imager->errstr;
+
+    return $filename;
 }
 
 sub load_config {
