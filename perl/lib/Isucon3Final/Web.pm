@@ -371,7 +371,7 @@ sub can_access_image {
 }
 
 sub get_image_data {
-    my($self, $c, %args) = shift;
+    my($self, $c, %args) = @_;
 
     my $want_file = $args{want_file};
     my $base_file = $args{base_file};
