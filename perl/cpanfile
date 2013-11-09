@@ -5,13 +5,13 @@ requires "JSON::XS";
 requires "JSON::Types";
 requires "Starlet";
 requires "Data::UUID";
+requires 'Imager';
 
 on 'test' => sub {
     requires 'Test::More';
     requires 'LWP::UserAgent';
     requires 'HTTP::Request::Common';
     requires 'Image::Size';
-    requires 'Imager';
     requires 'Path::Tiny';
     requires 'Test::Deep';
     requires 'Test::Deep::Matcher';
