@@ -452,7 +452,7 @@ get '/timeline' => [qw/ get_user require_user /] => sub {
         @params = ($user->{id}, $user->{id}, $latest_entry);
     }
     else {
-        $sql = 'SELECT entries.*, u.name as user_name, u.icon as user_name FROM entries INNER JOIN users as u ON entries.user = u.id WHERE (user=? OR publish_level=2 OR (publish_level=1 AND user IN (SELECT target FROM follow_map WHERE user=?))) ORDER BY entries.id DESC LIMIT 30';
+        $sql = 'SELECT entries.*, u.name as user_name, u.icon as user_icon FROM entries INNER JOIN users as u ON entries.user = u.id WHERE (user=? OR publish_level=2 OR (publish_level=1 AND user IN (SELECT target FROM follow_map WHERE user=?))) ORDER BY entries.id DESC LIMIT 30';
         @params = ($user->{id}, $user->{id});
     }
     my $start = time;
