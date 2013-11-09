@@ -235,12 +235,9 @@ post '/icon' => [qw/ get_user require_user /] => sub {
     }
 
     my ($fh, $filename) = tempfile();
-    $self->crop_square($upload->path, "png", $filename);
     my $icon = sha256_hex( $UUID->create );
     my $dir  = $self->load_config->{data_dir};
-    File::Copy::move($filename, "$dir/icon/$icon.png")
-        or $c->halt(500);
-    unlink $filename;
+    $self->crop_square($upload->path, "png", "$dir/icon/$icon.png");
 
     $self->dbh->query(
         'UPDATE users SET icon=? WHERE id=?',
