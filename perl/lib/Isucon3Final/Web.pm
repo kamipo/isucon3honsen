@@ -46,6 +46,20 @@ sub convert_with_crop {
     $self->convert($crop_save, $ext, $w, $h, $save);
 }
 
+sub convert_by_imagemagick {
+    my $self = shift;
+    my ($orig, $ext, $w, $h) = @_;
+    my ($fh, $filename) = tempfile();
+    my $newfile = "$filename.$ext";
+    system("convert", "-geometry", "${w}x${h}", $orig, $newfile);
+    open my $newfh, "<", $newfile or die $!;
+    read $newfh, my $data, -s $newfile;
+    close $newfh;
+    unlink $newfile;
+    unlink $filename;
+    $data;
+}
+
 sub convert {
     my $self = shift;
     my ($orig, $ext, $w, $h, $save) = @_;
@@ -58,10 +72,7 @@ sub convert {
     my $type = $ext eq 'jpg' ? 'jpeg' : $ext;
 
     my $img = Imager->new(file => $orig, type => $type)
-        or do {
-            warn "Imager->new(file => $orig, type => $type)";
-            die Imager->errstr;
-        };
+        or $self->convert_by_imagemagick(@_);
 
     my $newimg = $img->scale(
         qtype => 'mixing',
