@@ -75,22 +75,25 @@ sub convert {
 
     my $type = $ext eq 'jpg' ? 'jpeg' : $ext;
 
-    my $img = Imager->new(file => $orig, type => $type)
-        or $self->convert_by_imagemagick(@_);
-
-    my $newimg = $img->scale(
-        qtype => 'mixing',
-        type => 'min',
-        xpixels => $w,
-        ypixels => $h,
-    ) or die $img->errstr;
-
     my $buffer;
-    $newimg->write(
-        data => \$buffer,
-        type => $type,
-        jpegquality => 100,
-    ) or die $img->errstr;
+    my $img = Imager->new(file => $orig, type => $type);
+    unless ($img) {
+        $buffer = $self->convert_by_imagemagick(@_);
+    } else {
+
+        my $newimg = $img->scale(
+            qtype => 'mixing',
+            type => 'min',
+            xpixels => $w,
+            ypixels => $h,
+        ) or die $img->errstr;
+
+        $newimg->write(
+            data => \$buffer,
+            type => $type,
+            jpegquality => 100,
+        ) or die $img->errstr;
+    }
 
     open my $fh, '>', $save;
     print $fh $buffer;
