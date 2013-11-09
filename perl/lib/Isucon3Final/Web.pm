@@ -356,7 +356,8 @@ get '/image/:image' => [qw/ get_user /] => sub {
     my $h = $w;
     my $data;
     if ($w) {
-        my $file = "$local_dir/image/${size}${image}.jpg";
+        my $_size = $size || 'l';
+        my $file = "$local_dir/image/${_size}/${image}.jpg";
         $self->crop_square("$dir/image/${image}.jpg", "jpg", $file);
         $data = $self->convert($file, "jpg", $w, $h);
     }
