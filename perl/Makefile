@@ -1,3 +1,3 @@
 
 test:
-	carton exec prove -Ilib
+	carton exec -- prove -v -Ilib

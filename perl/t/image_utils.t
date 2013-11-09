@@ -75,7 +75,11 @@ subtest 'convert', sub {
 
     my $got = save_to_tempfile($g);
     my $expected = save_to_tempfile($x);
-    is system("$image_diff $got $expected"), 0;
+
+    my $result = `$image_diff $got $expected`;
+    is $?, 0, 'exit status';
+    my($gp, $xp) = ($result =~ /(\d+)/g);
+    cmp_ok $gp / $xp, '<', 0.01, $result;
 
     unlink $got;
     unlink $expected;
@@ -84,7 +88,11 @@ subtest 'convert', sub {
 subtest 'image_crop', sub {
     my $got = Isucon3Final::Web->crop_square("$data/fujiwara.jpg", "jpg");
     my $expected = U->crop_square("$data/fujiwara.jpg", "jpg");
-    is system("$image_diff $got $expected"), 0;
+
+    my $result = `$image_diff $got $expected`;
+    is $?, 0, 'exit status';
+    my($gp, $xp) = ($result =~ /(\d+)/g);
+    cmp_ok $gp / $xp, '<', 0.01, $result;
 
     unlink $got;
     unlink $expected;
