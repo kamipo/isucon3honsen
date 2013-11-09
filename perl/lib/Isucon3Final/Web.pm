@@ -327,7 +327,7 @@ sub can_access_image {
     }
     elsif ( $entry->{publish_level} == 1 ) {
         # publish_level==1 はentryの所有者かfollowerしか見えない
-        if ( $entry->{user} eq $user->{id} ) {
+        if ( ($entry->{user} || '') eq ($user->{id} || '') ) {
             # ok
         } else {
             my $follow = $self->dbh->select_row(
