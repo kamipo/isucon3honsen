@@ -52,6 +52,7 @@ sub convert {
     $newimg->write(
         data => \$buffer,
         type => $type,
+        jpegquality => 90,
     ) or die $img->errstr;
     return $buffer;
 }
