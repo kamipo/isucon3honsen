@@ -84,7 +84,7 @@ sub convert {
     open my $fh, '>', $save;
     print $fh $buffer;
     close $fh;
-    chomd 0644, $save;
+    chmod 0644, $save;
 
     return $buffer;
 }
@@ -131,7 +131,7 @@ sub crop_square {
         file => $save,
         type => $type,
     ) or die $img->errstr;
-    chomd 0644, $save;
+    chmod 0644, $save;
     return $save;
 }
 
@@ -296,7 +296,7 @@ post '/entry' => [qw/ get_user require_user /] => sub {
     my $dir = $self->load_config->{data_dir};
     File::Copy::move($upload->path, "$dir/image/$image_id.jpg")
         or $c->halt(500);
-    chomd 0644, "$dir/image/$image_id.jpg";
+    chmod 0644, "$dir/image/$image_id.jpg";
 
     my $publish_level = $c->req->param("publish_level");
     $self->dbh->query(
@@ -397,7 +397,7 @@ sub get_image_data {
         open my $fh, '>', $want_file;
         print $fh $want_res->content;
         close $fh;
-        chomd 0644, $want_file;
+        chmod 0644, $want_file;
         return $want_res->content;
     }
 
@@ -411,7 +411,7 @@ sub get_image_data {
             open my $fh, '>', $base_file;
             print $fh $base_res->content;
             close $fh;
-            chomd 0644, $base_file;
+            chmod 0644, $base_file;
 
             return $self->convert_with_crop($base_file, 'jpg', $args{crop_save}, $args{w}, $args{h}, $want_file);
         }
